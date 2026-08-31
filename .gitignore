@@ -1,0 +1,19 @@
+# Python virtual environment
+.venv/
+
+# Python cache files
+__pycache__/
+*.pyc
+
+# IDE/editor files
+.vscode/
+.idea/
+
+# Local PDFs
+data/pdfs/
+
+# Temporary files
+*.log
+
+# Operating-system clutter
+.DS_Store
