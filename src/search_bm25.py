@@ -1,15 +1,20 @@
 import json
+import sys
 from pathlib import Path
 
 import bm25s
 
 
 DATA_FILE = Path("data/raw/arxiv_papers.jsonl")
-QUERY = "geometric knot theory"
 TOP_K = 5
 
 
 def main():
+    if len(sys.argv) != 2:
+        print("Usage: python src/search_bm25.py \"your query here\"")
+        return
+
+    query = sys.argv[1]
     papers = []
 
     with DATA_FILE.open("r", encoding="utf-8") as file:
@@ -31,7 +36,7 @@ def main():
     retriever.index(corpus_tokens)
 
     query_tokens = bm25s.tokenize(
-        QUERY,
+        query,
         stopwords=None,
         stemmer=None,
     )
