@@ -14,6 +14,19 @@ def main():
 
     print(f"Number of papers: {len(papers)}")
 
+    missing_titles = 0
+    missing_abstracts = 0
+
+    for paper in papers:
+        if not paper["title"].strip():
+            missing_titles += 1
+
+        if not paper["abstract"].strip():
+            missing_abstracts += 1
+
+    print(f"Papers with missing titles: {missing_titles}")
+    print(f"Papers with missing abstracts: {missing_abstracts}")
+    
     print("\nFirst five papers:\n")
 
     for paper in papers[:5]:
