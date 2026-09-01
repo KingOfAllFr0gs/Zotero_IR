@@ -36,11 +36,35 @@ def main():
     retriever.index(corpus_tokens)
 
     query_tokens = bm25s.tokenize(
-        query,
-        stopwords=None,
-        stemmer=None,
-    )
+    query,
+    stopwords=None,
+    stemmer=None,
+        )
 
+    query_terms = bm25s.tokenize(
+    query,
+    stopwords=None,
+    stemmer=None,
+    return_ids=False,
+    )[0]
+    print("Query term document frequencies:")
+
+    for term in query_terms:
+        document_frequency = 0
+
+        for document in documents:
+            terms = bm25s.tokenize(
+                document,
+                stopwords=None,
+                stemmer=None,
+                return_ids=False,
+            )[0]
+
+            if term in set(terms):
+                document_frequency += 1
+
+        print(f"   {term}: {document_frequency}/{len(documents)}")
+        print()
     results, scores = retriever.retrieve(
         query_tokens,
         k=TOP_K,
@@ -49,12 +73,22 @@ def main():
     for rank, document_index in enumerate(results[0], start=1):
         paper = papers[document_index]
         score = scores[0, rank - 1]
-
+        document_terms = bm25s.tokenize(
+            documents[document_index],
+            stopwords=None,
+            stemmer=None,
+            return_ids=False,
+        )[0]
+        document_term_set = set(document_terms)
+        matched_terms = [
+            term for term in query_terms
+            if term in document_term_set
+        ]    
         print(f"{rank}. {paper['title']}")
         print(f"   arXiv: {paper['arxiv_id']}")
         print(f"   BM25 score: {score:.3f}")
+        print(f"   Matched query terms: {', '.join(matched_terms)}")
         print()
-
 
 if __name__ == "__main__":
     main()
