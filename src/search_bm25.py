@@ -8,7 +8,6 @@ import bm25s
 DATA_FILE = Path("data/raw/arxiv_papers.jsonl")
 TOP_K = 5
 
-
 def main():
     if len(sys.argv) != 2:
         print("Usage: python src/search_bm25.py \"your query here\"")

@@ -94,6 +94,9 @@ def main():
             judgments[arxiv_id] == 1
             for arxiv_id in retrieved_ids
         )
+
+        precision_at_k = relevant_retrieved / K
+
         #####RR########
         first_relevant_rank = next(
         (
@@ -112,8 +115,6 @@ def main():
         reciprocal_ranks.append(reciprocal_rank)
         ###############
 
-        reciprocal_rank = 1 / first_relevant_rank
-        reciprocal_ranks.append(reciprocal_rank)
 
         print(f"Relevant retrieved: {relevant_retrieved}/{K}")
         print(f"Precision@{K}: {precision_at_k:.3f}")
