@@ -32,7 +32,7 @@ def main():
         stemmer=None,
     )
 
-    retriever = bm25s.BM25()
+    retriever = bm25s.BM25(method="lucene")
     retriever.index(corpus_tokens)
 
     query_tokens = bm25s.tokenize(
