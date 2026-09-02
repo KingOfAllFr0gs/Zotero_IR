@@ -1,5 +1,5 @@
 {"query_id": "q001", "query": "geometric knot theory", "description": "Papers concerning geometric or variational properties of knots, such as knot energies, curvature, regularity, or geometric optimization. Exclude papers whose primary focus is a discrete or combinatorial knot model rather than geometric analysis."}
 {"query_id": "q002", "query": "finite total curvature", "description": "Papers in which curves of finite total curvature, or closely related geometric consequences of finite total curvature, are a substantive topic. Exclude papers where curvature appears only incidentally or refers to a substantially different notion."}
 {"query_id": "q003", "query": "Symmetric critical point", "description": "Papers concerning symmetric critical points or symmetric critical configurations in geometric knot theory and knot-energy problems. Exclude general critical-point theory unrelated to knots or geometric knot energies."}
-{"query_id": "q004", "query": "regularity theory"}
-{"query_id": "q005", "query": "Palais-Smale"}
+{"query_id": "q004", "query": "regularity theory", "description": "Papers developing or applying regularity theory in the context of geometric knot theory, knot energies, or related variational problems. Exclude papers where regularity theory is unrelated to these geometric or knot-theoretic settings."}
+{"query_id": "q005", "query": "Palais-Smale", "description": "Papers where the Palais-Smale condition, a variant of it, or Palais-Smale sequences are a substantive part of the mathematical analysis."}
