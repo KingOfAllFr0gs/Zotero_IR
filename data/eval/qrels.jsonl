@@ -8,3 +8,13 @@
 {"query_id": "q001", "arxiv_id": "1905.06064v1", "relevance": 1}
 {"query_id": "q001", "arxiv_id": "1308.2499v1", "relevance": 1}
 {"query_id": "q001", "arxiv_id": "2204.13603v1", "relevance": 1}
+{"query_id": "q002", "arxiv_id": "math/0606007v2", "relevance": 1}
+{"query_id": "q002", "arxiv_id": "1209.1527v2", "relevance": 0}
+{"query_id": "q002", "arxiv_id": "1308.2499v1", "relevance": 0}
+{"query_id": "q002", "arxiv_id": "2212.03701v1", "relevance": 0}
+{"query_id": "q002", "arxiv_id": "2309.08090v1", "relevance": 0}
+{"query_id": "q003", "arxiv_id": "1709.06949v2", "relevance": 1}
+{"query_id": "q003", "arxiv_id": "1207.2778v1", "relevance": 1}
+{"query_id": "q003", "arxiv_id": "2209.09403v1", "relevance": 0}
+{"query_id": "q003", "arxiv_id": "2505.02719v2", "relevance": 1}
+{"query_id": "q003", "arxiv_id": "math/0006203v3", "relevance": 1}
