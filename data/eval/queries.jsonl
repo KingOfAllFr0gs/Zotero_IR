@@ -1,0 +1,6 @@
+{"query_id": "q001", "query": "geometric knot theory", "description": "Papers concerning geometric or variational properties of knots, such as knot energies, curvature, regularity, or geometric optimization. Exclude papers whose primary focus is a discrete or combinatorial knot model rather than geometric analysis."}
+{"query_id": "q002", "query": "finite total curvature"}
+{"query_id": "q003", "query": "symmetry in knot theory"}
+{"query_id": "q004", "query": "regularity theory"}
+{"query_id": "q005", "query": "Palais-Smale"}
+
