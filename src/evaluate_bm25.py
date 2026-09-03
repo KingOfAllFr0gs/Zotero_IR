@@ -95,6 +95,14 @@ def main():
             for arxiv_id in retrieved_ids
         )
 
+        pooled_relevant = sum(judgments.values())
+
+        pooled_recall_at_k = (
+            relevant_retrieved / pooled_relevant
+            if pooled_relevant > 0
+            else 0.0
+        )
+
         precision_at_k = relevant_retrieved / K
 
         #####RR########
@@ -118,6 +126,7 @@ def main():
 
         print(f"Relevant retrieved: {relevant_retrieved}/{K}")
         print(f"Precision@{K}: {precision_at_k:.3f}")
+        print(f"Pooled Recall@{K}: {pooled_recall_at_k:.3f}")
         print(f"RR@{K}: {reciprocal_rank:.3f}")
         print()
 
