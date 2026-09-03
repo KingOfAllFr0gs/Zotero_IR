@@ -1,12 +1,15 @@
 import json
 from pathlib import Path
-import bm25s
 
+import bm25s
 import numpy as np
 from sentence_transformers import SentenceTransformer
 
+
+# Dense retrieval model used in benchmark v2.
 MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 
+# Benchmark-v2 data files.
 CORPUS_FILE = Path(
     "data/benchmark_v2/corpus/arxiv_papers.jsonl"
 )
@@ -19,11 +22,18 @@ QRELS_FILE = Path(
     "data/benchmark_v2/eval/qrels.jsonl"
 )
 
+# System-blind annotation file containing only previously unjudged
+# query-document pairs discovered by the retrieval pool.
 CANDIDATES_FILE = Path(
     "data/benchmark_v2/eval/pool_candidates.jsonl"
 )
 
+# Pool to the same depth as the current evaluation cutoff.
+#
+# This first v2 pool guarantees judgments for BM25 and dense top-5 results.
+# A deeper pool can be constructed later for stronger pooled-recall estimates.
 POOL_DEPTH = 5
+
 
 def load_jsonl(path):
     """Load a JSONL file into a list of Python dictionaries."""
@@ -39,7 +49,7 @@ def load_jsonl(path):
 
 
 def main():
-    # Load the three pieces of the benchmark.
+    # Load the corpus, evaluation queries, and existing relevance judgments.
     papers = load_jsonl(CORPUS_FILE)
     queries = load_jsonl(QUERIES_FILE)
     qrels = load_jsonl(QRELS_FILE)
@@ -49,11 +59,25 @@ def main():
     print(f"Existing judgments: {len(qrels)}")
     print()
 
-    # Use title + abstract, matching the retrieval baselines.
+    # Use exactly the same title + abstract representation as the standalone
+    # BM25 and dense retrieval baselines.
     documents = [
         paper["title"] + " " + paper["abstract"]
         for paper in papers
     ]
+
+    # Record every query-document pair that already has a human judgment.
+    #
+    # Relevance is query-specific, so the same paper may legitimately need
+    # separate judgments for different queries.
+    existing_pairs = {
+        (qrel["query_id"], qrel["arxiv_id"])
+        for qrel in qrels
+    }
+
+    # ------------------------------------------------------------------
+    # BM25 pool
+    # ------------------------------------------------------------------
 
     # Build the BM25 index once for the complete corpus.
     corpus_tokens = bm25s.tokenize(
@@ -64,13 +88,6 @@ def main():
 
     retriever = bm25s.BM25(method="lucene")
     retriever.index(corpus_tokens)
-
-    # Store judged query-document pairs so we can distinguish genuinely
-    # new candidates from papers that were already assessed in the pilot.
-    existing_pairs = {
-        (qrel["query_id"], qrel["arxiv_id"])
-        for qrel in qrels
-    }
 
     bm25_pairs = set()
 
@@ -89,6 +106,8 @@ def main():
             k=POOL_DEPTH,
         )
 
+        # Store query-document pairs rather than document IDs alone because
+        # relevance depends on the information need.
         query_pairs = {
             (
                 query_id,
@@ -108,10 +127,23 @@ def main():
 
     new_bm25_pairs = bm25_pairs - existing_pairs
 
-    print(f"BM25 top-{POOL_DEPTH} query-document pairs: {len(bm25_pairs)}")
-    print(f"New BM25 judgments required: {len(new_bm25_pairs)}")
+    print()
+    print(
+        f"BM25 top-{POOL_DEPTH} query-document pairs: "
+        f"{len(bm25_pairs)}"
+    )
+    print(
+        f"New BM25 judgments required: "
+        f"{len(new_bm25_pairs)}"
+    )
+    print()
 
-    # Build dense document embeddings once for the complete corpus.
+    # ------------------------------------------------------------------
+    # Dense retrieval pool
+    # ------------------------------------------------------------------
+
+    # Encode the corpus once rather than recomputing document embeddings
+    # separately for every query.
     model = SentenceTransformer(MODEL_NAME)
 
     document_embeddings = model.encode(
@@ -130,8 +162,10 @@ def main():
             normalize_embeddings=True,
         )
 
+        # With normalized embeddings, dot product equals cosine similarity.
         scores = document_embeddings @ query_embedding
 
+        # Keep the document indices with the highest similarity scores.
         ranked_indices = np.argsort(scores)[::-1][:POOL_DEPTH]
 
         query_pairs = {
@@ -150,11 +184,43 @@ def main():
             f"{query_id}: "
             f"{len(new_for_query)} new dense judgments"
         )
+
     new_dense_pairs = dense_pairs - existing_pairs
 
+    print()
+    print(
+        f"Dense top-{POOL_DEPTH} query-document pairs: "
+        f"{len(dense_pairs)}"
+    )
+    print(
+        f"New dense judgments required: "
+        f"{len(new_dense_pairs)}"
+    )
+
+    # ------------------------------------------------------------------
+    # Combined relevance pool
+    # ------------------------------------------------------------------
+
+    # Pool the union of BM25 and dense results.
+    #
+    # Using more than one retrieval system reduces the risk of defining
+    # relevance only from documents surfaced by a single ranking method.
     combined_pairs = bm25_pairs | dense_pairs
+
+    # Only genuinely unjudged query-document pairs require annotation.
     new_combined_pairs = combined_pairs - existing_pairs
 
+    print()
+    print(
+        f"Combined BM25+dense pool pairs: "
+        f"{len(combined_pairs)}"
+    )
+    print(
+        f"New judgments required after deduplication: "
+        f"{len(new_combined_pairs)}"
+    )
+
+    # Fast lookup tables for constructing annotation records.
     paper_by_id = {
         paper["arxiv_id"]: paper
         for paper in papers
@@ -171,6 +237,11 @@ def main():
         query = query_by_id[query_id]
         paper = paper_by_id[arxiv_id]
 
+        # Deliberately omit retrieval system, score, and rank.
+        #
+        # This makes the annotation file system-blind so that relevance
+        # judgments are based on the information need and paper content
+        # rather than knowledge of which system retrieved the candidate.
         candidate_records.append(
             {
                 "query_id": query_id,
@@ -182,6 +253,20 @@ def main():
                 "relevance": None,
             }
         )
+
+    # Do not overwrite an existing annotation file.
+    #
+    # The current candidate file may contain completed human judgments and
+    # therefore represents research data rather than disposable output.
+    if CANDIDATES_FILE.exists():
+        print()
+        print(
+            f"Candidate file already exists: {CANDIDATES_FILE}"
+        )
+        print("Existing annotation data was left unchanged.")
+        return
+
+    # Write one system-blind annotation candidate per JSONL line.
     with CANDIDATES_FILE.open("w", encoding="utf-8") as file:
         for candidate in candidate_records:
             file.write(
@@ -194,28 +279,6 @@ def main():
         f"to {CANDIDATES_FILE}"
     )
 
-    print()
-    print(
-        f"Dense top-{POOL_DEPTH} query-document pairs: "
-        f"{len(dense_pairs)}"
-    )
-    print(
-        f"New dense judgments required: "
-        f"{len(new_dense_pairs)}"
-    )
-
-    print()
-    print(
-        f"Combined BM25+dense pool pairs: "
-        f"{len(combined_pairs)}"
-    )
-    print(
-        f"New judgments required after deduplication: "
-        f"{len(new_combined_pairs)}"
-    )
-    print()
-    
 
 if __name__ == "__main__":
     main()
-
