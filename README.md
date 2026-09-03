@@ -1,63 +1,153 @@
 # Mathematical Literature Retrieval Benchmark
 
-A small, reproducible benchmark for evaluating information-retrieval methods on mathematical research literature.
+A reproducible benchmark for evaluating information-retrieval methods on mathematical research literature.
 
-The project currently compares a classical lexical retrieval baseline, **BM25**, with a **dense semantic retrieval** baseline on a curated corpus of arXiv papers.
+The project compares classical lexical retrieval with dense semantic retrieval on curated arXiv corpora and manually defined mathematical information needs.
 
-The main goal is not simply to maximize retrieval scores, but to build a careful experimental framework for studying mathematical literature retrieval with explicit corpus construction, human relevance judgments, reproducible baselines, and transparent evaluation methodology.
+The emphasis is not only on retrieval scores, but on building a transparent experimental framework with:
+
+* reproducible corpus construction;
+* explicit query definitions;
+* human relevance judgments;
+* multi-system relevance pooling;
+* careful treatment of unjudged documents;
+* multiple retrieval metrics;
+* qualitative error analysis;
+* versioned benchmark phases.
+
+The project currently contains a frozen **pilot benchmark** and a larger **benchmark v2**.
 
 ---
 
-## Research Question
+# Research Question
 
 How well do standard information-retrieval methods retrieve relevant mathematical papers for specialized mathematical information needs?
 
-The current pilot compares:
+The current retrieval baselines are:
 
 * **BM25 lexical retrieval**
-* **dense embedding retrieval**
+* **dense semantic retrieval**
 
-Future experiments may include:
+The longer-term goal is to investigate:
 
-* larger mathematical corpora
-* larger and more diverse query sets
-* hybrid lexical-semantic retrieval
-* stronger retrieval models
-* mathematics-oriented embedding models
-* reranking methods
+* hybrid lexical-semantic retrieval;
+* stronger embedding models;
+* mathematics-specific retrieval models;
+* reranking methods;
+* larger mathematical corpora and query sets.
 
-The immediate priority, however, is to **expand the benchmark before increasing model complexity**.
+The current priority remains **benchmark quality before model complexity**.
 
 ---
 
-## Current Pilot Benchmark
+# Benchmark Versions
 
-The current pilot contains:
+## Pilot Benchmark
+
+The original pilot benchmark is preserved as a frozen experimental snapshot.
 
 ```text
 104 arXiv papers
-5 mathematical queries
-binary human relevance judgments
-2 retrieval systems
+5 queries
+BM25 baseline
+dense baseline
+human relevance judgments
+BM25+dense relevance pooling
 ```
 
-The pilot was deliberately kept small so that the complete retrieval and evaluation pipeline could be designed, inspected, and debugged before scaling.
+The pilot data is stored under:
 
-It should therefore be understood primarily as a **methodological pilot**, not as a dataset large enough to support general conclusions about mathematical search.
+```text
+data/pilot/
+├── corpus/
+│   └── arxiv_papers.jsonl
+└── eval/
+    ├── queries.jsonl
+    └── qrels.jsonl
+```
+
+The pilot is no longer modified.
+
+Its purpose is to preserve the exact data used during development of the initial retrieval and evaluation pipeline.
 
 ---
 
-## Corpus
+## Benchmark v2
 
-The corpus is stored in:
+The active benchmark is substantially larger:
 
 ```text
-data/raw/arxiv_papers.jsonl
+675 arXiv papers
+20 queries
+307 current query-document relevance judgments
+BM25 retrieval
+dense retrieval
+system-blind relevance pooling
 ```
 
-It currently contains **104 unique arXiv papers**.
+Benchmark-v2 data is stored under:
 
-Each paper contains the following fields:
+```text
+data/benchmark_v2/
+├── corpus/
+│   └── arxiv_papers.jsonl
+└── eval/
+    ├── queries.jsonl
+    ├── qrels.jsonl
+    └── pool_candidates.jsonl
+```
+
+The original 104 pilot papers are included in the v2 corpus.
+
+This allows judgments from q001–q005 to be reused where the same versioned arXiv paper remains present.
+
+New papers remain unjudged until they enter a relevance-assessment pool.
+
+---
+
+# Repository Structure
+
+```text
+.
+├── data/
+│   ├── pilot/
+│   │   ├── corpus/
+│   │   │   └── arxiv_papers.jsonl
+│   │   └── eval/
+│   │       ├── queries.jsonl
+│   │       └── qrels.jsonl
+│   │
+│   └── benchmark_v2/
+│       ├── corpus/
+│       │   └── arxiv_papers.jsonl
+│       └── eval/
+│           ├── queries.jsonl
+│           ├── qrels.jsonl
+│           └── pool_candidates.jsonl
+│
+├── src/
+│   ├── collect_arxiv.py
+│   ├── expand_corpus.py
+│   ├── inspect_corpus.py
+│   ├── inspect_embeddings.py
+│   ├── search_bm25.py
+│   ├── search_dense.py
+│   ├── evaluate_bm25.py
+│   ├── evaluate_dense.py
+│   ├── build_pool.py
+│   ├── annotate_pool.py
+│   ├── merge_pool_qrels.py
+│   └── compare_rankings.py
+│
+├── requirements.txt
+└── README.md
+```
+
+---
+
+# Corpus Representation
+
+Each arXiv paper stores:
 
 ```text
 arxiv_id
@@ -71,69 +161,96 @@ pdf_url
 entry_url
 ```
 
-For retrieval, the searchable document representation is explicitly defined as:
+Both retrieval systems use the same searchable representation:
 
 ```text
 title + abstract
 ```
 
-The remaining fields are treated as metadata.
+All other fields are treated as metadata.
 
-The corpus inspection script confirms that all 104 papers contain non-empty titles and abstracts.
-
----
-
-## Corpus Construction
-
-The pilot corpus was collected through several broad arXiv searches related to the mathematical themes of the benchmark:
-
-```text
-"geometric knot theory"
-"calculus of variations"
-"Palais-Smale"
-"gradient flow"
-"knot energy"
-```
-
-Up to 25 results were requested for each search.
-
-Papers returned by multiple searches were deduplicated using their arXiv IDs.
-
-The resulting collection contains 104 unique papers.
-
-Corpus construction is implemented in:
-
-```text
-src/collect_arxiv.py
-```
-
-The resulting fixed corpus is retained as part of the reproducible pilot benchmark.
+Using the same representation ensures that differences between BM25 and dense retrieval arise from the retrieval method rather than different document content.
 
 ---
 
-## Repository Structure
+# Corpus Construction
+
+## Pilot Corpus
+
+The pilot corpus was constructed from broad arXiv searches around:
 
 ```text
-.
-├── data/
-│   ├── raw/
-│   │   └── arxiv_papers.jsonl
-│   └── eval/
-│       ├── queries.jsonl
-│       └── qrels.jsonl
-│
-├── src/
-│   ├── collect_arxiv.py
-│   ├── inspect_corpus.py
-│   ├── inspect_embeddings.py
-│   ├── search_bm25.py
-│   ├── search_dense.py
-│   ├── evaluate_bm25.py
-│   └── evaluate_dense.py
-│
-├── requirements.txt
-└── README.md
+geometric knot theory
+calculus of variations
+Palais-Smale
+gradient flow
+knot energy
 ```
+
+Duplicate papers were removed using arXiv IDs.
+
+This produced 104 unique papers.
+
+---
+
+## Benchmark-v2 Expansion
+
+Benchmark v2 was seeded with the complete pilot corpus and expanded using broader discovery searches including:
+
+```text
+geometric analysis
+calculus of variations
+critical point theory
+geometric measure theory
+concentration compactness
+Morse theory
+harmonic maps
+minimal surfaces
+isoperimetric problem
+Sobolev inequalities
+free boundary
+geometric flow
+Gamma convergence
+spectral geometry
+nonlinear elliptic equations
+```
+
+These are **corpus-construction queries**, not evaluation queries.
+
+They are deliberately broader than the benchmark information needs so that the corpus is not constructed solely from the exact wording used during evaluation.
+
+Up to 40 arXiv results were requested for each discovery query.
+
+The resulting benchmark-v2 corpus contains:
+
+```text
+675 unique papers
+```
+
+with:
+
+```text
+0 missing titles
+0 missing abstracts
+0 duplicate base arXiv IDs
+```
+
+---
+
+# arXiv Version Handling
+
+Existing pilot records are preserved exactly, including their versioned arXiv IDs.
+
+For deduplication during corpus expansion, version suffixes are removed conceptually:
+
+```text
+2505.02719v2   → 2505.02719
+math/0606007v2 → math/0606007
+```
+
+If a newer arXiv version is encountered during expansion, an existing benchmark record is retained rather than replaced.
+
+This is important because relevance judgments refer to specific versioned arXiv IDs.
 
 ---
 
@@ -147,192 +264,114 @@ The lexical baseline uses:
 bm25s==0.3.11
 ```
 
-with the Lucene-style implementation:
+with:
 
 ```python
 method="lucene"
 ```
 
-The current baseline intentionally uses minimal preprocessing:
+Current preprocessing is intentionally minimal:
 
 ```text
 no stemming
 no stopword removal
 ```
 
-The searchable document is:
-
-```text
-title + abstract
-```
-
-This produces a simple and interpretable lexical baseline before introducing additional preprocessing choices.
-
-Example search:
+Example:
 
 ```bash
 python src/search_bm25.py "geometric knot theory"
 ```
 
-The script reports:
+The search script reports:
 
-* document rank
-* title
-* arXiv ID
-* BM25 score
-* literal query terms matched by the document
+* rank;
+* title;
+* arXiv ID;
+* BM25 score;
+* matched query terms;
+* query-term document frequencies.
 
-It also reports query-term document frequencies as a simple ranking diagnostic.
-
-These diagnostics are explanatory only and do not affect retrieval.
+The diagnostic information does not affect ranking.
 
 ---
 
 ## Dense Retrieval
 
-The dense baseline uses Sentence Transformers with:
+The dense baseline uses:
 
 ```text
 sentence-transformers/all-MiniLM-L6-v2
 ```
 
-The same document representation is used:
-
-```text
-title + abstract
-```
-
-Documents and queries are encoded independently as dense vectors.
-
-Embeddings are normalized:
+Documents and queries are encoded as normalized dense vectors:
 
 ```python
 normalize_embeddings=True
 ```
 
-Similarity is calculated using:
+Similarity is computed using:
 
 ```python
 document_embeddings @ query_embedding
 ```
 
-Because both vectors are normalized, their dot product is equivalent to cosine similarity.
+Because the embeddings are normalized, dot product is equivalent to cosine similarity.
 
-Example search:
+Example:
 
 ```bash
 python src/search_dense.py "geometric knot theory"
 ```
 
-The script reports:
-
-* document rank
-* title
-* arXiv ID
-* cosine similarity
-
-The current model is deliberately a small, general-purpose embedding model rather than a mathematics-specific retrieval model.
-
-Its role is to provide a simple semantic baseline against which later systems can be compared.
+The model is intentionally a small, general-purpose baseline rather than a mathematics-specific retrieval model.
 
 ---
 
-# Pilot Evaluation Set
+# Evaluation Queries
 
-The evaluation queries are stored in:
+Benchmark v2 contains **20 mathematical information needs**.
 
-```text
-data/eval/queries.jsonl
-```
-
-The current pilot contains five information needs.
-
----
-
-## q001 — geometric knot theory
-
-**Query**
+The first five originate from the pilot benchmark.
 
 ```text
-geometric knot theory
+q001  geometric knot theory
+q002  finite total curvature
+q003  Symmetric critical point
+q004  regularity theory
+q005  Geometric Gradient flow
 ```
 
-**Information need**
-
-Papers concerning geometric or variational properties of knots, such as knot energies, curvature, regularity, or geometric optimization.
-
-Papers whose primary focus is a discrete or combinatorial knot model rather than geometric analysis are excluded.
-
----
-
-## q002 — finite total curvature
-
-**Query**
+The expanded query set adds:
 
 ```text
-finite total curvature
+q006  variational methods in geometric analysis
+q007  Palais-Smale condition for geometric functionals
+q008  geometric curvature functionals
+q009  Topological methods in calculus of variations
+q010  existence of minimizers in geometric variational problems
+q011  concentration compactness in geometric variational problems
+q012  Morse theory for variational problems
+q013  harmonic maps and energy minimization
+q014  minimal surfaces and variational methods
+q015  isoperimetric problems on manifolds
+q016  Sobolev inequalities in geometric analysis
+q017  free boundary variational problems
+q018  singularities in geometric flows
+q019  Gamma convergence of geometric energies
+q020  variational eigenvalue problems on geometric domains
 ```
 
-**Information need**
-
-Papers in which curves of finite total curvature, or closely related geometric consequences of finite total curvature, are a substantive topic.
-
-Papers where curvature is only incidental or refers to a substantially different notion are excluded.
-
----
-
-## q003 — Symmetric critical point
-
-**Query**
+Each query contains both:
 
 ```text
-Symmetric critical point
+query
+description
 ```
 
-**Information need**
+The description defines the actual information need and determines relevance.
 
-Papers concerning symmetric critical points or symmetric critical configurations in geometric knot theory and knot-energy problems.
-
-General critical-point theory unrelated to knots or geometric knot energies is excluded.
-
----
-
-## q004 — regularity theory
-
-**Query**
-
-```text
-regularity theory
-```
-
-**Information need**
-
-Papers developing or applying regularity theory in geometric knot theory, knot energies, or related variational problems.
-
-Regularity theory unrelated to those settings is excluded.
-
----
-
-## q005 — Geometric Gradient flow
-
-**Query**
-
-```text
-Geometric Gradient flow
-```
-
-**Information need**
-
-Papers where gradient flow is studied in a geometric or geometric-variational setting, including flows of geometric objects or geometric energy functionals.
-
-Gradient-flow methods in unrelated areas such as:
-
-* quantum field theory
-* machine learning
-* statistical mechanics
-* information theory
-
-are excluded.
+This is especially important for compositional queries, where matching only one component is insufficient.
 
 ---
 
@@ -341,7 +380,7 @@ are excluded.
 Human relevance judgments are stored in:
 
 ```text
-data/eval/qrels.jsonl
+data/benchmark_v2/eval/qrels.jsonl
 ```
 
 Binary relevance is currently used:
@@ -351,7 +390,7 @@ Binary relevance is currently used:
 0 = non-relevant
 ```
 
-A paper absent from the qrels for a particular query is considered:
+A missing query-document pair is:
 
 ```text
 unjudged
@@ -359,32 +398,134 @@ unjudged
 
 and is **not automatically treated as non-relevant**.
 
-This distinction is important because the current relevance set was constructed through retrieval pooling rather than exhaustive assessment of every query-document pair.
+Relevance is query-specific.
+
+The same paper may therefore be relevant to one query and non-relevant to another.
 
 ---
 
 # Relevance Pooling
 
-The first relevance judgments were obtained from BM25 rankings.
+Benchmark v2 currently uses a system-blind top-5 union pool.
 
-The pool was later expanded using dense retrieval so that the benchmark would not define relevance solely from documents surfaced by BM25.
-
-The current pool includes approximately:
+For every query:
 
 ```text
-BM25 top 20 for q001–q004
-BM25 top 30 for q005
-
-Dense top 20 for q001–q005
+BM25 top 5
+      ∪
+dense top 5
+      ↓
+remove previously judged pairs
+      ↓
+human relevance assessment
 ```
 
-When dense retrieval introduced documents already judged through the BM25 pool, they were not judged again.
+Across the 20 queries:
 
-Only previously unseen query-document pairs were assessed.
+```text
+BM25 top-5 pairs:       100
+dense top-5 pairs:      100
+combined unique pairs:  167
+new judgments required: 154
+```
 
-This produces a union pool influenced by more than one retrieval system.
+All 154 new candidates were manually assessed.
 
-The judgment set is therefore substantially better than one derived solely from BM25, although it is still not exhaustive over the complete 104-document corpus.
+Together with reused judgments from the pilot phase, benchmark v2 currently contains:
+
+```text
+307 relevance judgments
+```
+
+---
+
+# System-Blind Annotation
+
+`build_pool.py` deliberately omits:
+
+* retrieval-system identity;
+* rank;
+* retrieval score
+
+from annotation candidates.
+
+The annotation file contains only:
+
+* query ID;
+* query text;
+* information-need description;
+* arXiv ID;
+* title;
+* abstract;
+* relevance field.
+
+This reduces the possibility that knowing which system retrieved a document influences the human relevance judgment.
+
+---
+
+# Annotation Tools
+
+## Build a Relevance Pool
+
+```bash
+python src/build_pool.py
+```
+
+This script:
+
+1. runs BM25;
+2. runs dense retrieval;
+3. constructs their union;
+4. removes existing qrels;
+5. produces system-blind annotation candidates.
+
+The current pool depth is:
+
+```text
+5
+```
+
+matching the current evaluation cutoff.
+
+---
+
+## Annotate Candidates
+
+```bash
+python src/annotate_pool.py
+```
+
+Controls:
+
+```text
+1 = relevant
+0 = non-relevant
+s = skip
+q = quit
+```
+
+Progress is saved immediately after each judgment.
+
+Previously judged candidates are automatically skipped, making annotation resumable.
+
+Skipping leaves a document genuinely unjudged rather than assigning relevance 0.
+
+---
+
+## Merge Completed Judgments
+
+```bash
+python src/merge_pool_qrels.py
+```
+
+The merge script:
+
+* refuses to merge incomplete annotation pools;
+* never overwrites existing qrels;
+* avoids duplicate query-document judgments;
+* is safe to rerun.
+
+The frozen pilot qrels are never modified.
 
 ---
 
@@ -392,183 +533,319 @@ The judgment set is therefore substantially better than one derived solely from 
 
 The benchmark currently reports:
 
-* **Precision@5**
-* **Pooled Recall@5**
-* **Reciprocal Rank@5**
-* **Mean Reciprocal Rank@5**
+* Precision@5;
+* Reciprocal Rank@5;
+* Mean Reciprocal Rank@5;
+* pooled Recall@5.
 
 ---
 
 ## Precision@5
 
-Precision@5 measures the fraction of the first five retrieved papers that are relevant:
-
 $$
 P@5 =
-\frac{\text{relevant papers retrieved in top 5}}{5}.
+\frac{\text{relevant papers retrieved in the first five}}
+{5}.
 $$
-
-It measures how much relevant material appears near the top of the ranking.
 
 ---
 
 ## Reciprocal Rank
 
-Reciprocal Rank depends only on the position of the first relevant result:
-
 $$
 RR =
-\frac{1}{\text{rank of first relevant result}}.
+\frac{1}{\text{rank of the first relevant paper}}.
 $$
 
 For example:
 
 ```text
-first relevant result at rank 1 → RR = 1
-first relevant result at rank 2 → RR = 0.5
-first relevant result at rank 4 → RR = 0.25
+rank 1 → RR = 1
+rank 2 → RR = 0.5
+rank 3 → RR ≈ 0.333
+rank 5 → RR = 0.2
 ```
 
-Mean Reciprocal Rank averages this quantity over all evaluated queries.
+Mean Reciprocal Rank averages RR across queries.
 
 ---
 
 ## Pooled Recall@5
-
-Ordinary recall would require knowing every relevant document in the corpus.
-
-That is not currently available.
-
-Instead, the benchmark reports:
 
 $$
 \text{Pooled Recall@5}
 =
-\frac{\text{relevant documents retrieved in top 5}}
-{\text{known relevant documents in the judgment pool}}.
+\frac{\text{relevant papers retrieved in the top five}}
+{\text{known relevant papers in the judgment pool}}.
 $$
 
-The word **pooled** is important.
+This is **not exhaustive recall**.
 
-The denominator represents all currently known relevant papers discovered through the BM25+dense pooling process.
+The denominator contains only currently known relevant documents.
 
-It does not necessarily represent every relevant paper in the complete corpus.
+Pooled recall is therefore considered provisional in benchmark v2 because pooling depth is not yet uniform historically:
 
-The pooled-recall denominator may therefore increase in the future if additional retrieval systems discover previously unjudged relevant documents.
+* q001–q005 inherit deeper pilot judgments;
+* q006–q020 currently rely primarily on the top-5 v2 union pool;
+* targeted error analysis has already discovered additional relevant documents outside the initial top-five pool.
 
----
-
-# Current Pilot Results
-
-## Precision@5
-
-| Query    |      BM25 | Dense |
-| -------- | --------: | ----: |
-| q001     |     0.800 | 0.800 |
-| q002     |     0.200 | 0.200 |
-| q003     | **0.800** | 0.600 |
-| q004     |     0.600 | 0.600 |
-| q005     |     0.200 | 0.200 |
-| **Mean** | **0.520** | 0.480 |
-
----
-
-## Pooled Recall@5
-
-| Query |      BM25 | Dense |
-| ----- | --------: | ----: |
-| q001  |     0.200 | 0.200 |
-| q002  |     1.000 | 1.000 |
-| q003  | **0.444** | 0.333 |
-| q004  |     0.429 | 0.429 |
-| q005  |     0.333 | 0.333 |
-
-Approximate mean pooled Recall@5:
+For this reason, the principal current v2 comparison emphasizes:
 
 ```text
-BM25:  0.481
-Dense: 0.459
-```
-
----
-
-## Reciprocal Rank@5
-
-| Query |  BM25 |     Dense |
-| ----- | ----: | --------: |
-| q001  | 0.500 | **1.000** |
-| q002  | 1.000 |     1.000 |
-| q003  | 1.000 |     1.000 |
-| q004  | 1.000 |     1.000 |
-| q005  | 0.250 | **1.000** |
-
-Mean Reciprocal Rank:
-
-```text
-BM25 MRR@5:  0.750
-Dense MRR@5: 1.000
-```
-
----
-
-# Preliminary Interpretation
-
-The pilot results show different strengths for the two retrieval approaches.
-
-BM25 currently has slightly higher:
-
-```text
-mean Precision@5
-mean pooled Recall@5
-```
-
-while dense retrieval has substantially higher:
-
-```text
+Precision@5
+RR@5
 MRR@5
 ```
 
-Dense retrieval places a relevant document at **rank 1 for all five current queries**.
-
-BM25 does not.
-
-However, dense retrieval does not simply dominate BM25.
-
-For example, on q003:
-
-```text
-BM25 relevant documents in top 5:  4
-Dense relevant documents in top 5: 3
-```
-
-Thus BM25 has higher Precision@5 and pooled Recall@5 for that query even though both systems retrieve a relevant document at rank 1.
-
-q005 gives another useful example.
-
-Both systems have:
-
-```text
-Precision@5 = 0.200
-```
-
-but:
-
-```text
-BM25 RR@5  = 0.250
-Dense RR@5 = 1.000
-```
-
-Thus the two systems retrieve the same number of relevant documents within the top five, but dense retrieval places the relevant paper much earlier.
-
-These examples demonstrate why multiple retrieval metrics are required.
-
-No strong general conclusion about lexical versus dense retrieval should yet be drawn from only five queries.
+rather than pooled recall.
 
 ---
 
-# Running the Project
+# Current Benchmark-v2 Results
 
-Create a Python virtual environment:
+After relevance auditing during qualitative error analysis:
+
+| Metric               |  BM25 |     Dense |
+| -------------------- | ----: | --------: |
+| **Mean Precision@5** | 0.520 | **0.660** |
+| **MRR@5**            | 0.687 | **0.817** |
+
+Dense retrieval currently performs better on both aggregate metrics.
+
+These numbers remain preliminary and should not yet be interpreted as general evidence that dense retrieval is superior for mathematical literature retrieval.
+
+The benchmark still contains only 20 queries, and qualitative behavior varies substantially by query.
+
+---
+
+# Query-Level Behavior
+
+The expanded benchmark reveals several distinct retrieval behaviors.
+
+## q005 — lexical relation failure
+
+Query:
+
+```text
+Geometric Gradient flow
+```
+
+BM25 retrieved papers about:
+
+```text
+gradient estimates under geometric flow
+```
+
+These papers contained the individual lexical signals:
+
+```text
+gradient
+geometric
+flow
+```
+
+but did not study gradient flows arising from geometric variational problems.
+
+After abstract-level auditing, five originally positive q005 judgments were corrected to non-relevant.
+
+Current q005 performance:
+
+```text
+BM25:
+P@5 = 0.000
+RR@5 = 0.000
+
+Dense:
+P@5 = 0.600
+RR@5 = 1.000
+```
+
+This demonstrates that lexical co-occurrence does not guarantee the correct mathematical relationship between terms.
+
+---
+
+## q007 — semantic modifier failure
+
+Query:
+
+```text
+Palais-Smale condition for geometric functionals
+```
+
+Dense retrieval strongly captures the central Palais-Smale concept but retrieves generic functional-analytic and critical-point papers that fail the **geometric** restriction.
+
+Current performance:
+
+```text
+BM25:
+P@5 = 0.200
+RR@5 = 0.200
+
+Dense:
+P@5 = 0.000
+RR@5 = 0.000
+```
+
+This illustrates that semantic retrieval may still underweight an important restricting modifier.
+
+---
+
+## q009 — shared retrieval failure
+
+Query:
+
+```text
+Topological methods in calculus of variations
+```
+
+Both systems currently retrieve:
+
+```text
+P@5 = 0.000
+RR@5 = 0.000
+```
+
+However, deeper inspection showed that the corpus does contain relevant papers involving:
+
+* Lusternik-Schnirelmann category;
+* minimax methods;
+* Morse-index information;
+* critical-point theory;
+* topological degree methods.
+
+Five additional relevant q009 papers were identified during error analysis.
+
+Thus q009 is a genuine shared top-ranking failure rather than simply a corpus-coverage failure.
+
+It also demonstrates a limitation of shallow pooling: relevant material may exist even when every system contributing to the initial pool misses it.
+
+---
+
+## q012 — dense semantic/compositional advantage
+
+Query:
+
+```text
+Morse theory for variational problems
+```
+
+BM25 retrieves papers matching either:
+
+```text
+Morse theory
+```
+
+or:
+
+```text
+variational problems
+```
+
+without reliably enforcing the intended relationship between them.
+
+Dense retrieval surfaces papers involving related concepts such as:
+
+* Morse index;
+* Palais-Smale sequences;
+* constrained functionals;
+* critical-point methods.
+
+Current performance:
+
+```text
+BM25:
+P@5 = 0.000
+RR@5 = 0.000
+
+Dense:
+P@5 = 0.600
+RR@5 = 1.000
+```
+
+---
+
+## q014 — lexical specificity advantage
+
+Query:
+
+```text
+minimal surfaces and variational methods
+```
+
+Abstract-level auditing showed that several papers about minimal surfaces were initially labeled too broadly despite using probabilistic, complex-analytic, or other non-variational methods.
+
+After correcting these judgments:
+
+```text
+BM25:
+P@5 = 0.600
+RR@5 = 1.000
+
+Dense:
+P@5 = 0.400
+RR@5 ≈ 0.333
+```
+
+BM25 benefits here from precise minimal-surface terminology, while dense retrieval admits semantically related but methodologically incorrect papers.
+
+---
+
+# Relevance-Judgment Auditing
+
+Qualitative error analysis revealed that relevance assessment itself requires auditing.
+
+Several initial judgments were overly permissive because papers matched a broad topic without satisfying all components of a compositional information need.
+
+Examples included:
+
+```text
+gradient estimates + geometric flow
+```
+
+being mistaken for:
+
+```text
+geometric gradient flow
+```
+
+and generic minimal-surface papers being counted for:
+
+```text
+minimal surfaces + variational methods
+```
+
+The benchmark therefore treats qualitative retrieval inspection as part of the evaluation methodology rather than merely an optional post-hoc analysis.
+
+A useful principle emerging from this phase is:
+
+> For compositional information needs, every substantive component of the query definition must be satisfied.
+
+---
+
+# Error-Analysis Tool
+
+Rankings can be compared directly using:
+
+```bash
+python src/compare_rankings.py q012
+```
+
+The script displays:
+
+* the information-need description;
+* BM25 top results;
+* dense top results;
+* relevance labels;
+* BM25 scores;
+* cosine similarities.
+
+The tool is diagnostic only and does not modify benchmark data.
+
+---
+
+# Running the Benchmark
+
+Create a virtual environment:
 
 ```bash
 python -m venv .venv
@@ -588,16 +865,16 @@ pip install -r requirements.txt
 
 ---
 
-## Inspect the Corpus
+## Inspect Corpus
 
 ```bash
 python src/inspect_corpus.py
 ```
 
-The current corpus should report:
+Current benchmark-v2 corpus:
 
 ```text
-Number of papers: 104
+Number of papers: 675
 Papers with missing titles: 0
 Papers with missing abstracts: 0
 ```
@@ -636,222 +913,151 @@ python src/evaluate_dense.py
 
 ---
 
-# Implementation Notes
-
-The project code is intentionally kept relatively simple.
-
-The current focus is on making methodological decisions explicit rather than prematurely optimizing the implementation.
-
-The core scripts now contain comments documenting important choices including:
-
-* corpus construction
-* document representation
-* preprocessing
-* BM25 configuration
-* dense-vector normalization
-* similarity computation
-* treatment of unjudged documents
-* pooled recall
-* reciprocal rank
-* relevance pooling
-
-JSONL loading code also ignores blank lines so that accidental whitespace does not break corpus or evaluation-file parsing.
-
----
-
 # Reproducibility Principles
 
-The project follows several explicit principles.
+The project currently follows these principles.
 
-### Keep corpus construction separate from retrieval
+### Version benchmark phases
 
-The corpus is collected once and stored locally.
+The pilot is frozen rather than silently transformed into benchmark v2.
 
-Retrieval systems operate on the same fixed corpus.
+### Preserve existing research data
 
-### Use the same document representation
+Existing corpus records and relevance judgments are never overwritten unnecessarily.
 
-Both BM25 and dense retrieval use:
+### Use identical document representations
+
+BM25 and dense retrieval both use:
 
 ```text
 title + abstract
 ```
 
-This avoids confounding retrieval-method differences with different input representations.
+### Separate corpus construction from evaluation queries
 
-### Establish simple baselines first
-
-BM25 and a small general-purpose embedding model are used before introducing sophisticated retrieval methods.
+Corpus discovery uses broad mathematical searches rather than simply issuing all benchmark queries verbatim.
 
 ### Treat unjudged documents correctly
 
-Unjudged documents are not silently interpreted as non-relevant.
+Unjudged does not mean non-relevant.
 
-### Avoid single-system ground truth
+### Pool from multiple retrieval systems
 
-Relevance judgments are pooled from more than one retrieval system.
+Ground truth is not constructed solely from BM25 or solely from dense retrieval.
 
-### Use multiple metrics
+### Blind the relevance assessor to retrieval-system identity
 
-Precision, pooled recall, and reciprocal rank capture different aspects of retrieval behavior.
+System, score, and rank are omitted from annotation candidates.
 
-### Distinguish pooled evaluation from exhaustive evaluation
+### Save human annotation incrementally
 
-The current relevance judgments are incomplete.
+Annotation progress is written immediately and can be resumed.
 
-Metric names and interpretation explicitly reflect this limitation.
+### Audit relevance judgments qualitatively
 
-### Preserve experimental milestones
+Error analysis is used both to understand retrieval failures and to detect inconsistent human judgments.
 
-Git commits are used to checkpoint coherent stages of the benchmark.
+### Avoid overstating pooled recall
+
+Pooled recall is explicitly distinguished from exhaustive recall.
+
+### Preserve coherent experimental milestones with Git
+
+Corpus changes, query changes, pooling, annotation, judgment corrections, and code documentation are committed separately where possible.
 
 ---
 
 # Current Status
 
-The initial pilot benchmark is now operational.
-
 Completed:
 
-* arXiv corpus collection
-* duplicate removal
-* corpus inspection and validation
-* fixed title+abstract document representation
-* BM25 retrieval baseline
-* BM25 ranking diagnostics
-* dense embedding inspection
-* dense retrieval baseline
-* five manually defined mathematical information needs
-* binary human relevance judgments
-* BM25 relevance pooling
-* dense top-20 relevance pooling
-* Precision@5 evaluation
-* Reciprocal Rank evaluation
-* MRR@5 evaluation
-* pooled Recall@5 evaluation
-* BM25 versus dense comparison
-* code documentation and cleanup
-* defensive JSONL blank-line handling
-
-At this stage, the principal limitation is no longer the evaluation pipeline itself.
-
-The main limitation is **benchmark size**.
+* frozen 104-paper pilot benchmark;
+* 675-paper benchmark-v2 corpus;
+* 20-query evaluation set;
+* BM25 lexical baseline;
+* dense semantic baseline;
+* corpus inspection and validation;
+* arXiv-version-aware corpus expansion;
+* BM25+dense top-5 relevance pooling;
+* system-blind annotation workflow;
+* 154 new v2 pool judgments;
+* reuse of pilot relevance data;
+* 307 current v2 relevance judgments;
+* Precision@5 evaluation;
+* RR@5 evaluation;
+* MRR@5 evaluation;
+* provisional pooled Recall@5 evaluation;
+* query-by-query ranking comparison;
+* qualitative error analysis;
+* relevance-judgment auditing;
+* documentation of core and v2 tooling.
 
 ---
 
-# Next Benchmark Phase
+# Next Steps
 
-The next phase will focus on expanding the benchmark before introducing substantially more sophisticated retrieval systems.
+The immediate next priority is to strengthen the relevance pool.
 
-The current pilot has two major limitations:
+The current top-5 pool is sufficient for evaluating the top-five rankings of BM25 and dense retrieval, but q009 demonstrated that relevant documents may exist deeper in the corpus even when both systems fail to retrieve them near the top.
 
-```text
-104 documents
-5 queries
-```
+Planned next steps:
 
-Both should increase.
-
-The query count is especially important because retrieval comparisons are ultimately evaluated across information needs.
-
-With only five queries, aggregate scores can change substantially because of the behavior of a single query.
-
-The current pilot will therefore be preserved as a reproducible checkpoint rather than continuously transformed into a much larger experiment.
-
-A larger second-stage benchmark will be developed from the lessons learned here.
-
-A tentative next target is:
-
-```text
-20–30 carefully defined mathematical queries
-several hundred papers
-```
-
-The exact size will depend partly on the amount of human relevance assessment required.
-
----
-
-# Roadmap
-
-Near-term priorities:
-
-1. preserve the current pilot benchmark as a stable reference point;
-2. design a larger and more diverse set of mathematical information needs;
-3. expand the mathematical corpus reproducibly;
-4. run BM25 and dense retrieval over the expanded benchmark;
-5. construct a new relevance pool using multiple retrieval systems;
-6. perform human relevance assessment;
-7. evaluate Precision, pooled Recall, RR, MRR, and potentially additional ranking metrics;
-8. conduct systematic query-by-query error analysis.
-
-After the benchmark has been expanded:
-
-9. investigate hybrid lexical-semantic retrieval;
-10. experiment with stronger embedding models;
-11. investigate mathematics-oriented retrieval models;
-12. consider reranking methods;
-13. study larger-scale mathematical literature retrieval.
-
-Possible future evaluation improvements include:
-
-* graded relevance judgments
-* nDCG
-* deeper ranking cutoffs
-* exhaustive judgments for smaller subsets
-* larger query sets
-* cross-topic evaluation
-* inter-annotator agreement if additional assessors are introduced
+1. deepen relevance pooling beyond rank 5;
+2. ensure more consistent pooling depth across all 20 queries;
+3. continue auditing compositional relevance judgments;
+4. recompute pooled Recall@5 using the richer judgment set;
+5. perform broader error analysis;
+6. investigate additional ranking metrics such as nDCG;
+7. only after benchmark stabilization, investigate hybrid lexical-semantic retrieval;
+8. experiment with stronger and mathematics-oriented embedding models.
 
 ---
 
 # Experimental Philosophy
 
-The project intentionally prioritizes **benchmark quality before model complexity**.
-
-The development strategy is:
+The project deliberately follows:
 
 ```text
 build a small benchmark
         ↓
-validate corpus construction
+validate retrieval and evaluation
         ↓
-validate relevance judgments
+freeze the pilot
         ↓
-establish simple retrieval baselines
+expand corpus and query set
         ↓
-validate evaluation metrics
+construct human relevance judgments
         ↓
-expand the benchmark
+audit retrieval and annotation errors
         ↓
-analyze retrieval behavior
+deepen evaluation quality
         ↓
-introduce more sophisticated systems
+only then increase model complexity
 ```
 
-This order is deliberate.
+The goal is not merely to obtain a higher retrieval score.
 
-A sophisticated retrieval model is difficult to evaluate meaningfully if the benchmark itself contains too few queries or poorly understood relevance judgments.
-
-The goal is therefore not merely to obtain higher retrieval scores.
-
-The goal is to construct an experimental setting in which improvements can eventually be interpreted with confidence.
+The goal is to create an experimental setting in which retrieval improvements can eventually be interpreted with confidence.
 
 ---
 
 # Project Status
 
-This repository is an experimental research project under active development.
+The project has moved beyond its initial pilot phase.
 
-The first pilot benchmark now provides a complete end-to-end pipeline:
+Benchmark v2 now provides an end-to-end workflow:
 
 ```text
-arXiv collection
-→ corpus inspection
+corpus construction
+→ corpus validation
 → lexical retrieval
 → dense retrieval
-→ human relevance assessment
-→ pooled judgments
+→ multi-system pooling
+→ blinded human annotation
+→ qrel integration
 → quantitative evaluation
+→ qualitative error analysis
+→ relevance auditing
 ```
 
-The next major milestone is **benchmark expansion**, with particular emphasis on increasing the number and diversity of mathematical information needs before drawing broader conclusions about retrieval-system performance.
+The next major milestone is **deeper and more consistent relevance assessment across the 20-query benchmark** before introducing substantially more sophisticated retrieval systems.
