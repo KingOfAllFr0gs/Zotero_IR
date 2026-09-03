@@ -300,3 +300,8 @@
 {"query_id": "q020", "arxiv_id": "2211.15632v2", "relevance": 1}
 {"query_id": "q020", "arxiv_id": "2402.07749v1", "relevance": 0}
 {"query_id": "q020", "arxiv_id": "2408.15744v2", "relevance": 1}
+{"query_id": "q009", "arxiv_id": "math/0006203v3", "relevance": 1}
+{"query_id": "q009", "arxiv_id": "2210.12626v2", "relevance": 1}
+{"query_id": "q009", "arxiv_id": "1410.4851v1", "relevance": 1}
+{"query_id": "q009", "arxiv_id": "1207.2778v1", "relevance": 1}
+{"query_id": "q009", "arxiv_id": "1810.07933v1", "relevance": 1}
