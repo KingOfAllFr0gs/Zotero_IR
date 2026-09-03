@@ -17,3 +17,6 @@ data/pdfs/
 
 # Operating-system clutter
 .DS_Store
+
+# Editor backup files
+*~
