@@ -3,8 +3,7 @@ from pathlib import Path
 
 
 # Location of the raw arXiv corpus.
-DATA_FILE = Path("data/raw/arxiv_papers.jsonl")
-
+DATA_FILE = Path("data/benchmark_v2/corpus/arxiv_papers.jsonl")
 
 def main():
     papers = []
